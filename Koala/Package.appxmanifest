@@ -8,11 +8,11 @@
   IgnorableNamespaces="uap mp genTemplate">
 
   <Identity
-    Name="EBB514D9-2FA5-4B8F-9D90-6481322212DE"
+    Name="17507019-0875-4E82-A7AF-AEB38A45D35F"
     Publisher="CN=Starz0r"
     Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="EBB514D9-2FA5-4B8F-9D90-6481322212DE" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="17507019-0875-4E82-A7AF-AEB38A45D35F" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>Koala</DisplayName>
@@ -43,12 +43,6 @@
       </uap:VisualElements>
 
       <Extensions>
-        <uap:Extension Category="windows.protocol">
-          <uap:Protocol Name="wtsapp">
-            <uap:Logo>Assets\Icon.png</uap:Logo>
-            <uap:DisplayName>Koala</uap:DisplayName>
-          </uap:Protocol>
-        </uap:Extension>
       </Extensions>
     </Application>
   </Applications>

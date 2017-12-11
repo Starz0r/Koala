@@ -174,10 +174,6 @@
     <comment>Parameter must be an Enum name in enum to boolean converter</comment>
   </data>
   NavigateUri
-  <data name="UriSchemeExample_Title.Text" xml:space="preserve">
-    <value>URI Scheme Example</value>
-    <comment>Page Title for URI Scheme Example</comment>
-  </data>
   <data name="AfterUpdate_Body.Text" xml:space="preserve">
     <value>Replace the content of this dialog with whatever content is appropriate to your app.
 You might want to consider lists of bug fixes and new features.

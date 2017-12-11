@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Koala.Activation;
-using Koala.Helpers;
 
 using Windows.ApplicationModel.Activation;
 using Windows.UI.Core;
@@ -92,7 +91,6 @@ namespace Koala.Services
 
         private IEnumerable<ActivationHandler> GetActivationHandlers()
         {
-            yield return Singleton<SchemeActivationHandler>.Instance;
             yield break;
         }
 
