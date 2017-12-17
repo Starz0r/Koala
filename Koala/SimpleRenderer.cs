@@ -9,7 +9,7 @@ using Windows.Foundation;
 
 namespace Koala
 {
-    private class SimpleRenderer : IDisposable
+    class SimpleRenderer : IDisposable
     {
         private Size size = Size.Empty;
 

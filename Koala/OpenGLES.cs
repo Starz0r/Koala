@@ -19,8 +19,10 @@ using glbool = System.Int32;
 
 namespace Koala
 {
+
     public class OpenGLES : IDisposable
     {
+
         // Out-of-band handle values
         public static readonly EGLNativeDisplayType EGL_DEFAULT_DISPLAY = IntPtr.Zero;
         public static readonly IntPtr EGL_NO_DISPLAY = IntPtr.Zero;
@@ -277,9 +279,27 @@ namespace Koala
             }
         }
 
+        public void MakeCurrentAlt(EGLSurface surfDraw, EGLSurface surfRead)
+        {
+            if (eglMakeCurrent(mEglDisplay, surfDraw, surfRead, mEglContext) == EGL_FALSE)
+            {
+                throw new Exception("Failed to make EGLSurface current");
+            }
+        }
+
+        public EGLContext GetCurrentContext()
+        {
+            return eglGetCurrentContext();
+        }
+
         public int SwapBuffers(EGLSurface surface)
         {
             return eglSwapBuffers(mEglDisplay, surface);
+        }
+
+        public IntPtr GetProcAddress(string procname)
+        {
+            return eglGetProcAddress(procname);
         }
 
         public void Reset()
@@ -292,29 +312,43 @@ namespace Koala
 
         private const string libEGL = "libEGL.dll";
 
-        [DllImport(libEGL)]
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         private static extern IntPtr eglGetProcAddress([MarshalAs(UnmanagedType.LPStr)] string procname);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern EGLDisplay eglGetPlatformDisplayEXT(int platform, EGLNativeDisplayType native_display, int[] attrib_list);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern glbool eglInitialize(EGLDisplay dpy, out int major, out int minor);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern glbool eglChooseConfig(EGLDisplay dpy, int[] attrib_list, [In, Out] EGLConfig[] configs, int config_size, out int num_config);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern EGLContext eglCreateContext(EGLDisplay dpy, EGLConfig config, EGLContext share_context, int[] attrib_list);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern EGLSurface eglCreateWindowSurface(EGLDisplay dpy, EGLConfig config, [MarshalAs(UnmanagedType.IInspectable)] EGLNativeWindowType win, int[] attrib_list);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern glbool eglQuerySurface(EGLDisplay dpy, EGLSurface surface, int attribute, out int value);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern glbool eglDestroySurface(EGLDisplay dpy, EGLSurface surface);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern glbool eglMakeCurrent(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern glbool eglSwapBuffers(EGLDisplay dpy, EGLSurface surface);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern glbool eglDestroyContext(EGLDisplay dpy, EGLContext ctx);
-        [DllImport(libEGL)]
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern glbool eglTerminate(EGLDisplay dpy);
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
+        public static extern EGLContext eglGetCurrentContext();
     }
 }
