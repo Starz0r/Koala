@@ -181,8 +181,9 @@ namespace Koala.Views
             //await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
             await videoBox.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Low, () =>
             {
-                Mpv.OpenGLCallbackDraw(mpvGLContext, 0, 917, -770);
-
+                int w = (int)((Frame)Window.Current.Content).ActualWidth;
+                int h = (int)((Frame)Window.Current.Content).ActualHeight;
+                Mpv.OpenGLCallbackDraw(mpvGLContext, 0, w, -h);
                 mOpenGLES.SwapBuffers(mRenderSurface);
 
                 StopRenderLoop();
@@ -218,9 +219,6 @@ namespace Koala.Views
             mpv.OpenGLCallbackInitialize(mpvGLContext, null, MyProcAddress, IntPtr.Zero);
             mpv.OpenGLCallbackSetUpdate(mpvGLContext, DrawNextFrame, IntPtr.Zero);
 
-            System.Diagnostics.Debug.WriteLine(mpv_handle);
-            System.Diagnostics.Debug.WriteLine(mpvGLContext);
-            System.Diagnostics.Debug.WriteLine(mpv);
             mpv.ExecuteCommand(mpv_handle, "loadfile", @storageFolder.Path + @"\[Golumpa] My Hero Academia S2 - 13 [FuniDub 1080p x264 AAC].mkv");
             //mpv.ExecuteCommand(mpv_handle, "loadfile", "http://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v");
         }
