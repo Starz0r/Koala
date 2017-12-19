@@ -296,3 +296,6 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 
+# Dynamic Libaries
+*.dll
+*.pdb

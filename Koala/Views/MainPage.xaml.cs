@@ -17,16 +17,15 @@ namespace Koala.Views
 {
     public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
-        #region OpenGL
+        #region Definitions
 
         private IntPtr mRenderSurface;
         private OpenGLES mOpenGLES;
         private object mRenderSurfaceCriticalSection = new object();
         private IAsyncAction mRenderLoopWorker;
-        public static IntPtr mpvGLContext;
         Mpv mpv;
 
-        #endregion OpenGL
+        #endregion Definitions
 
         #region Events
         public MainPage()

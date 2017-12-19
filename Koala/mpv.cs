@@ -15,11 +15,11 @@ namespace Koala
         public delegate void MyOpenGLCallbackUpdate(IntPtr context);
 
         // Members
-        private static MyOpenGLCallbackUpdate callback_method;
-        private static GCHandle callback_gc;
-        private static IntPtr callback_ptr;
-        private static IntPtr libmpv_handle;
-        private static IntPtr libmpv_gl_context;
+        private MyOpenGLCallbackUpdate callback_method;
+        private GCHandle callback_gc;
+        private IntPtr callback_ptr;
+        private IntPtr libmpv_handle;
+        private IntPtr libmpv_gl_context;
         #endregion Definitions
 
         #region Methods
