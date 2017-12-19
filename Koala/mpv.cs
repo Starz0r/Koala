@@ -12,6 +12,9 @@ namespace Koala
         #region Definitions
         public delegate IntPtr MyGetProcAddress(IntPtr context, string name);
         public delegate void MyOpenGLCallbackUpdate(IntPtr context);
+        private static MyOpenGLCallbackUpdate callback_method;
+        private static GCHandle callback_gc;
+        private static IntPtr callback_ptr;
         #endregion Definitions
 
         #region Methods
@@ -45,9 +48,16 @@ namespace Koala
 
         }
 
-        public MpvErrorCode OpenGLCallbackSetUpdate(IntPtr gl_context, MyOpenGLCallbackUpdate callback, IntPtr callback_context)
+        public static MpvErrorCode OpenGLCallbackSetUpdate(IntPtr gl_context, MyOpenGLCallbackUpdate callback, IntPtr callback_context)
         {
-            return (MpvErrorCode)mpv_opengl_cb_set_update_callback(gl_context, callback, callback_context);
+            // Set class members
+            callback_method = callback;
+            callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback);
+
+            // Allocate the pointer so it doesn't get garbage collected
+            callback_gc = GCHandle.Alloc(callback_ptr, GCHandleType.Pinned);
+
+            return (MpvErrorCode)mpv_opengl_cb_set_update_callback(gl_context, callback_ptr, callback_context);
         }
 
         public MpvErrorCode ExecuteCommand(IntPtr mpv_handle, params string[] args)
@@ -63,11 +73,22 @@ namespace Koala
             return result;
         }
 
-        public static MpvErrorCode OpenGLCallbackDraw(IntPtr context, int framebuffer_object, int width, int height)
+        public static MpvErrorCode OpenGLCallbackDraw(IntPtr gl_context, int framebuffer_object, int width, int height)
         {
-            return (MpvErrorCode)mpv_opengl_cb_draw(context, framebuffer_object, width, height);
+            // callback_ptr might get garbage collected if it isn't used too much, so we have to keep it alive this way
+            callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback_method);
+            return (MpvErrorCode)mpv_opengl_cb_draw(gl_context, framebuffer_object, width, height);
         }
 
+        public static MpvErrorCode OpenGLCallbackReportFlip(IntPtr gl_context)
+        {
+            return (MpvErrorCode)mpv_opengl_cb_report_flip(gl_context);
+        }
+
+        public static MpvErrorCode OpenGLCallbackRender(IntPtr gl_context)
+        {
+            return (MpvErrorCode)mpv_opengl_cb_render(gl_context);
+        }
         #endregion Methods
 
         #region Helpers
@@ -159,13 +180,20 @@ namespace Koala
         private static extern int mpv_opengl_cb_init_gl(IntPtr gl_context, byte[] exts, MyGetProcAddress callback, IntPtr fn_context);
 
         [DllImport(libmpv, EntryPoint = "mpv_opengl_cb_set_update_callback", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
-        private static extern int mpv_opengl_cb_set_update_callback(IntPtr gl_context, MyOpenGLCallbackUpdate callback, IntPtr callback_context);
+        private static extern int mpv_opengl_cb_set_update_callback(IntPtr gl_context, IntPtr callback, IntPtr callback_context);
+        //private static extern int mpv_opengl_cb_set_update_callback(IntPtr gl_context, MyOpenGLCallbackUpdate callback, IntPtr callback_context);
 
         [DllImport(libmpv, EntryPoint = "mpv_command", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
         private static extern int mpv_command(IntPtr mpv_handle, IntPtr strings);
 
         [DllImport(libmpv, EntryPoint = "mpv_opengl_cb_draw", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
-        private static extern int mpv_opengl_cb_draw(IntPtr context, int fbo, int width, int height);
+        private static extern int mpv_opengl_cb_draw(IntPtr gl_context, int fbo, int width, int height);
+
+        [DllImport(libmpv, EntryPoint = "mpv_opengl_cb_report_flip", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
+        private static extern int mpv_opengl_cb_report_flip(IntPtr gl_context, Int64 time = 0);
+
+        [DllImport(libmpv, EntryPoint = "mpv_opengl_cb_render", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
+        private static extern int mpv_opengl_cb_render(IntPtr gl_context, int vp = 0);
         #endregion Imports
     }
 }

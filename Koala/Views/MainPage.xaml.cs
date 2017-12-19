@@ -23,12 +23,12 @@ namespace Koala.Views
         private OpenGLES mOpenGLES;
         private object mRenderSurfaceCriticalSection = new object();
         private IAsyncAction mRenderLoopWorker;
-        IntPtr mpvGLContext;
+        public static IntPtr mpvGLContext;
         Mpv mpv;
 
         #endregion OpenGL
 
-        #region Default
+        #region Events
         public MainPage()
         {
             InitializeComponent();
@@ -126,7 +126,7 @@ namespace Koala.Views
                     var size = mOpenGLES.GetSurfaceDimensions(mRenderSurface);
 
                     // Logic to update the scene could go here
-
+                    
                     renderer.UpdateWindowSize(size);
                     renderer.Draw();
 
@@ -166,9 +166,9 @@ namespace Koala.Views
         }
 
         private void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        #endregion Default
+        #endregion Events
 
-        #region Delegates
+        #region Methods
         private IntPtr MyProcAddress(IntPtr context, string name)
         {
             System.Diagnostics.Debug.WriteLine(name);
@@ -178,25 +178,25 @@ namespace Koala.Views
 
         private async void DrawNextFrame(IntPtr context)
         {
-            //await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
-            await videoBox.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Low, () =>
+            // Wait for the UI Thread to run to render the next frame.
+            await videoBox.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, new DispatchedHandler(() =>
             {
+                // Get the Width and Height of the Window (it can change at anytime)
                 int w = (int)((Frame)Window.Current.Content).ActualWidth;
                 int h = (int)((Frame)Window.Current.Content).ActualHeight;
+
+                // Draw the next frame, swap buffers, and report the frame has been flipped
                 Mpv.OpenGLCallbackDraw(mpvGLContext, 0, w, -h);
                 mOpenGLES.SwapBuffers(mRenderSurface);
+                Mpv.OpenGLCallbackReportFlip(mpvGLContext);
 
+                // Stop the render loop to prevent the frame from being overwritten
                 StopRenderLoop();
-            });
+            }));
 
             return;
         }
 
-
-        #endregion Delegates
-
-        #region mpv
-        private IntPtr libmpv;
         private IntPtr mpv_handle;
 
         private void InitalizeMpvDynamic()
@@ -208,21 +208,19 @@ namespace Koala.Views
             mpv_handle = mpv.Create();
             mpv.Initalize(mpv_handle);
 
-            //debug
             Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
-            mpv.SetOptionString(mpv_handle, Mpv.GetUtf8Bytes("log-file"), Mpv.GetUtf8Bytes(@storageFolder.Path + @"\urbunshun.log"));
+            mpv.SetOptionString(mpv_handle, Mpv.GetUtf8Bytes("log-file"), Mpv.GetUtf8Bytes(@storageFolder.Path + @"\koala.log"));
             mpv.SetOptionString(mpv_handle, Mpv.GetUtf8Bytes("msg-level"), Mpv.GetUtf8Bytes("all=v"));
             mpv.SetOptionString(mpv_handle, Mpv.GetUtf8Bytes("vo"), Mpv.GetUtf8Bytes("opengl-cb"));
 
             mpvGLContext = mpv.GetSubApi(mpv_handle, 1);
 
             mpv.OpenGLCallbackInitialize(mpvGLContext, null, MyProcAddress, IntPtr.Zero);
-            mpv.OpenGLCallbackSetUpdate(mpvGLContext, DrawNextFrame, IntPtr.Zero);
+            Mpv.OpenGLCallbackSetUpdate(mpvGLContext, DrawNextFrame, IntPtr.Zero);
 
-            mpv.ExecuteCommand(mpv_handle, "loadfile", @storageFolder.Path + @"\[Golumpa] My Hero Academia S2 - 13 [FuniDub 1080p x264 AAC].mkv");
-            //mpv.ExecuteCommand(mpv_handle, "loadfile", "http://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v");
+            mpv.ExecuteCommand(mpv_handle, "loadfile", "http://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v");
+
         }
-
-        #endregion mpv
+        #endregion Methods
     }
 }
