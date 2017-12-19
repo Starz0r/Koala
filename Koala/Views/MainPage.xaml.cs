@@ -186,9 +186,9 @@ namespace Koala.Views
                 int h = (int)((Frame)Window.Current.Content).ActualHeight;
 
                 // Draw the next frame, swap buffers, and report the frame has been flipped
-                Mpv.OpenGLCallbackDraw(mpvGLContext, 0, w, -h);
+                mpv.OpenGLCallbackDraw(0, w, -h);
                 mOpenGLES.SwapBuffers(mRenderSurface);
-                Mpv.OpenGLCallbackReportFlip(mpvGLContext);
+                mpv.OpenGLCallbackReportFlip();
 
                 // Stop the render loop to prevent the frame from being overwritten
                 StopRenderLoop();
@@ -203,22 +203,17 @@ namespace Koala.Views
         {
             mOpenGLES.MakeCurrent(mRenderSurface);
 
-            Mpv mpv = new Mpv();
-
-            mpv_handle = mpv.Create();
-            mpv.Initalize(mpv_handle);
+            mpv = new Mpv();
 
             Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
-            mpv.SetOptionString(mpv_handle, Mpv.GetUtf8Bytes("log-file"), Mpv.GetUtf8Bytes(@storageFolder.Path + @"\koala.log"));
-            mpv.SetOptionString(mpv_handle, Mpv.GetUtf8Bytes("msg-level"), Mpv.GetUtf8Bytes("all=v"));
-            mpv.SetOptionString(mpv_handle, Mpv.GetUtf8Bytes("vo"), Mpv.GetUtf8Bytes("opengl-cb"));
+            mpv.SetOptionString(Mpv.GetUtf8Bytes("log-file"), Mpv.GetUtf8Bytes(@storageFolder.Path + @"\koala.log"));
+            mpv.SetOptionString(Mpv.GetUtf8Bytes("msg-level"), Mpv.GetUtf8Bytes("all=v"));
+            mpv.SetOptionString(Mpv.GetUtf8Bytes("vo"), Mpv.GetUtf8Bytes("opengl-cb"));
 
-            mpvGLContext = mpv.GetSubApi(mpv_handle, 1);
+            mpv.OpenGLCallbackInitialize(null, MyProcAddress, IntPtr.Zero);
+            mpv.OpenGLCallbackSetUpdate(DrawNextFrame, IntPtr.Zero);
 
-            mpv.OpenGLCallbackInitialize(mpvGLContext, null, MyProcAddress, IntPtr.Zero);
-            Mpv.OpenGLCallbackSetUpdate(mpvGLContext, DrawNextFrame, IntPtr.Zero);
-
-            mpv.ExecuteCommand(mpv_handle, "loadfile", "http://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v");
+            mpv.ExecuteCommand("loadfile", "http://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v");
 
         }
         #endregion Methods

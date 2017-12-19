@@ -10,45 +10,53 @@ namespace Koala
     public class Mpv
     {
         #region Definitions
+        // Delegates
         public delegate IntPtr MyGetProcAddress(IntPtr context, string name);
         public delegate void MyOpenGLCallbackUpdate(IntPtr context);
+
+        // Members
         private static MyOpenGLCallbackUpdate callback_method;
         private static GCHandle callback_gc;
         private static IntPtr callback_ptr;
+        private static IntPtr libmpv_handle;
+        private static IntPtr libmpv_gl_context;
         #endregion Definitions
 
         #region Methods
         public Mpv()
         {
+            libmpv_handle = mpv_create();
+            Initalize(libmpv_handle);
+            libmpv_gl_context = GetSubApi(1);
         }
 
-        public IntPtr Create()
+        private IntPtr Create()
         {
             return mpv_create();
         }
 
-        public MpvErrorCode Initalize(IntPtr mpv_handle)
+        private MpvErrorCode Initalize(IntPtr mpv_handle)
         {
             return (MpvErrorCode)mpv_initialize(mpv_handle);
         }
 
-        public MpvErrorCode SetOptionString(IntPtr mpv_handle, byte[] option, byte[] value)
+        public MpvErrorCode SetOptionString(byte[] option, byte[] value)
         {
-            return (MpvErrorCode)mpv_set_option_string(mpv_handle, option, value);
+            return (MpvErrorCode)mpv_set_option_string(libmpv_handle, option, value);
         }
 
-        public IntPtr GetSubApi(IntPtr mpv_handle, int value)
+        private IntPtr GetSubApi(int value)
         {
-            return mpv_get_sub_api(mpv_handle, value);
+            return mpv_get_sub_api(libmpv_handle, value);
         }
 
-        public MpvErrorCode OpenGLCallbackInitialize(IntPtr gl_context, byte[] exts, MyGetProcAddress callback, IntPtr fn_context)
+        public MpvErrorCode OpenGLCallbackInitialize(byte[] exts, MyGetProcAddress callback, IntPtr fn_context)
         {
-            return (MpvErrorCode)mpv_opengl_cb_init_gl(gl_context, exts, callback, fn_context);
+            return (MpvErrorCode)mpv_opengl_cb_init_gl(libmpv_gl_context, exts, callback, fn_context);
 
         }
 
-        public static MpvErrorCode OpenGLCallbackSetUpdate(IntPtr gl_context, MyOpenGLCallbackUpdate callback, IntPtr callback_context)
+        public MpvErrorCode OpenGLCallbackSetUpdate(MyOpenGLCallbackUpdate callback, IntPtr callback_context)
         {
             // Set class members
             callback_method = callback;
@@ -57,14 +65,14 @@ namespace Koala
             // Allocate the pointer so it doesn't get garbage collected
             callback_gc = GCHandle.Alloc(callback_ptr, GCHandleType.Pinned);
 
-            return (MpvErrorCode)mpv_opengl_cb_set_update_callback(gl_context, callback_ptr, callback_context);
+            return (MpvErrorCode)mpv_opengl_cb_set_update_callback(libmpv_gl_context, callback_ptr, callback_context);
         }
 
-        public MpvErrorCode ExecuteCommand(IntPtr mpv_handle, params string[] args)
+        public MpvErrorCode ExecuteCommand(params string[] args)
         {
             IntPtr[] byteArrayPointers;
             var mainPtr = AllocateUtf8IntPtrArrayWithSentinel(args, out byteArrayPointers);
-            MpvErrorCode result = (MpvErrorCode)mpv_command(mpv_handle, mainPtr);
+            MpvErrorCode result = (MpvErrorCode)mpv_command(libmpv_handle, mainPtr);
             foreach (var ptr in byteArrayPointers)
             {
                 Marshal.FreeHGlobal(ptr);
@@ -73,21 +81,21 @@ namespace Koala
             return result;
         }
 
-        public static MpvErrorCode OpenGLCallbackDraw(IntPtr gl_context, int framebuffer_object, int width, int height)
+        public MpvErrorCode OpenGLCallbackDraw(int framebuffer_object, int width, int height)
         {
             // callback_ptr might get garbage collected if it isn't used too much, so we have to keep it alive this way
             callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback_method);
-            return (MpvErrorCode)mpv_opengl_cb_draw(gl_context, framebuffer_object, width, height);
+            return (MpvErrorCode)mpv_opengl_cb_draw(libmpv_gl_context, framebuffer_object, width, height);
         }
 
-        public static MpvErrorCode OpenGLCallbackReportFlip(IntPtr gl_context)
+        public MpvErrorCode OpenGLCallbackReportFlip()
         {
-            return (MpvErrorCode)mpv_opengl_cb_report_flip(gl_context);
+            return (MpvErrorCode)mpv_opengl_cb_report_flip(libmpv_gl_context);
         }
 
-        public static MpvErrorCode OpenGLCallbackRender(IntPtr gl_context)
+        public MpvErrorCode OpenGLCallbackRender()
         {
-            return (MpvErrorCode)mpv_opengl_cb_render(gl_context);
+            return (MpvErrorCode)mpv_opengl_cb_render(libmpv_gl_context);
         }
         #endregion Methods
 
@@ -97,7 +105,7 @@ namespace Koala
             return Encoding.UTF8.GetBytes(s + "\0");
         }
 
-        public static IntPtr AllocateUtf8IntPtrArrayWithSentinel(string[] arr, out IntPtr[] byteArrayPointers)
+        private IntPtr AllocateUtf8IntPtrArrayWithSentinel(string[] arr, out IntPtr[] byteArrayPointers)
         {
             int numberOfStrings = arr.Length + 1; // add extra element for extra null pointer last (sentinel)
             byteArrayPointers = new IntPtr[numberOfStrings];
