@@ -40,14 +40,41 @@ namespace Koala
             return (MpvErrorCode)mpv_initialize(mpv_handle);
         }
 
-        public MpvErrorCode SetOptionString(byte[] option, byte[] value)
+        public MpvErrorCode SetOptionString(string option, string value)
         {
-            return (MpvErrorCode)mpv_set_option_string(libmpv_handle, option, value);
+            return (MpvErrorCode)mpv_set_option_string(libmpv_handle, GetUtf8Bytes(option), GetUtf8Bytes(value));
         }
 
         private IntPtr GetSubApi(int value)
         {
             return mpv_get_sub_api(libmpv_handle, value);
+        }
+
+        public MpvErrorCode ExecuteCommand(params string[] args)
+        {
+            IntPtr[] byteArrayPointers;
+            var mainPtr = AllocateUtf8IntPtrArrayWithSentinel(args, out byteArrayPointers);
+            MpvErrorCode result = (MpvErrorCode)mpv_command(libmpv_handle, mainPtr);
+            foreach (var ptr in byteArrayPointers)
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+            Marshal.FreeHGlobal(mainPtr);
+            return result;
+        }
+
+        public Tuple<MpvErrorCode, String> GetProperty(string property)
+        {
+            IntPtr lpBuffer = IntPtr.Zero;
+            int err = mpv_get_property_string(libmpv_handle, GetUtf8Bytes(property), (int)MpvFormat.MPV_FORMAT_STRING, ref lpBuffer);
+            String result = Marshal.PtrToStringAnsi(lpBuffer);
+            return Tuple.Create((MpvErrorCode)err, result);
+        }
+
+        public MpvErrorCode SetProperty(string property, string value)
+        {
+            var temp = GetUtf8Bytes(value);
+            return (MpvErrorCode)mpv_set_property(libmpv_handle, GetUtf8Bytes(property), (int)MpvFormat.MPV_FORMAT_STRING, ref temp);
         }
 
         public MpvErrorCode OpenGLCallbackInitialize(byte[] exts, MyGetProcAddress callback, IntPtr fn_context)
@@ -66,19 +93,6 @@ namespace Koala
             callback_gc = GCHandle.Alloc(callback_ptr, GCHandleType.Pinned);
 
             return (MpvErrorCode)mpv_opengl_cb_set_update_callback(libmpv_gl_context, callback_ptr, callback_context);
-        }
-
-        public MpvErrorCode ExecuteCommand(params string[] args)
-        {
-            IntPtr[] byteArrayPointers;
-            var mainPtr = AllocateUtf8IntPtrArrayWithSentinel(args, out byteArrayPointers);
-            MpvErrorCode result = (MpvErrorCode)mpv_command(libmpv_handle, mainPtr);
-            foreach (var ptr in byteArrayPointers)
-            {
-                Marshal.FreeHGlobal(ptr);
-            }
-            Marshal.FreeHGlobal(mainPtr);
-            return result;
         }
 
         public MpvErrorCode OpenGLCallbackDraw(int framebuffer_object, int width, int height)
@@ -100,7 +114,7 @@ namespace Koala
         #endregion Methods
 
         #region Helpers
-        public static byte[] GetUtf8Bytes(String s)
+        private byte[] GetUtf8Bytes(String s)
         {
             return Encoding.UTF8.GetBytes(s + "\0");
         }
@@ -189,7 +203,6 @@ namespace Koala
 
         [DllImport(libmpv, EntryPoint = "mpv_opengl_cb_set_update_callback", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
         private static extern int mpv_opengl_cb_set_update_callback(IntPtr gl_context, IntPtr callback, IntPtr callback_context);
-        //private static extern int mpv_opengl_cb_set_update_callback(IntPtr gl_context, MyOpenGLCallbackUpdate callback, IntPtr callback_context);
 
         [DllImport(libmpv, EntryPoint = "mpv_command", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
         private static extern int mpv_command(IntPtr mpv_handle, IntPtr strings);
@@ -202,6 +215,12 @@ namespace Koala
 
         [DllImport(libmpv, EntryPoint = "mpv_opengl_cb_render", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
         private static extern int mpv_opengl_cb_render(IntPtr gl_context, int vp = 0);
+
+        [DllImport(libmpv, EntryPoint = "mpv_get_property_string", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
+        private static extern int mpv_get_property_string(IntPtr mpv_handle, byte[] name, int format, ref IntPtr data);
+
+        [DllImport(libmpv, EntryPoint = "mpv_set_property", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
+        private static extern int mpv_set_property(IntPtr mpv_handle, byte[] name, int format, ref byte[] data);
         #endregion Imports
     }
 }

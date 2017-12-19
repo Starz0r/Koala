@@ -205,9 +205,9 @@ namespace Koala.Views
             mpv = new Mpv();
 
             Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
-            mpv.SetOptionString(Mpv.GetUtf8Bytes("log-file"), Mpv.GetUtf8Bytes(@storageFolder.Path + @"\koala.log"));
-            mpv.SetOptionString(Mpv.GetUtf8Bytes("msg-level"), Mpv.GetUtf8Bytes("all=v"));
-            mpv.SetOptionString(Mpv.GetUtf8Bytes("vo"), Mpv.GetUtf8Bytes("opengl-cb"));
+            mpv.SetOptionString("log-file", @storageFolder.Path + @"\koala.log");
+            mpv.SetOptionString("msg-level", "all=v");
+            mpv.SetOptionString("vo", "opengl-cb");
 
             mpv.OpenGLCallbackInitialize(null, MyProcAddress, IntPtr.Zero);
             mpv.OpenGLCallbackSetUpdate(DrawNextFrame, IntPtr.Zero);
