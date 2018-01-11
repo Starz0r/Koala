@@ -71,10 +71,10 @@ namespace Koala
             return Tuple.Create((MpvErrorCode)err, result);
         }
 
-        public MpvErrorCode SetProperty(string property, string value)
+        public MpvErrorCode SetProperty(string property, MpvFormat format, string value)
         {
             var temp = GetUtf8Bytes(value);
-            return (MpvErrorCode)mpv_set_property(libmpv_handle, GetUtf8Bytes(property), (int)MpvFormat.MPV_FORMAT_STRING, ref temp);
+            return (MpvErrorCode)mpv_set_property(libmpv_handle, GetUtf8Bytes(property), (int)format, ref temp);
         }
 
         public MpvErrorCode OpenGLCallbackInitialize(byte[] exts, MyGetProcAddress callback, IntPtr fn_context)
