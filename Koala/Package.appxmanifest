@@ -4,6 +4,7 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"  
   xmlns:genTemplate="http://schemas.microsoft.com/appx/developer/windowsTemplateStudio"
   IgnorableNamespaces="uap mp genTemplate">
 
@@ -43,7 +44,12 @@
       </uap:VisualElements>
 
       <Extensions>
-      </Extensions>
+		  <uap5:Extension Category="windows.appExecutionAlias" Executable="Koala.exe" EntryPoint="Koala.App">
+			  <uap5:AppExecutionAlias>
+				  <uap5:ExecutionAlias Alias="Koala.exe" />
+			  </uap5:AppExecutionAlias>
+		  </uap5:Extension>
+	  </Extensions>
     </Application>
   </Applications>
 
