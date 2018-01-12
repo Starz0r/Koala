@@ -12,7 +12,7 @@ namespace Koala
 {
     public sealed partial class App : Application
     {
-        public static string CmdArgv { get; set; }
+        public static CommandLineActivationOperation CmdOperation { get; set; }
 
         private Lazy<ActivationService> _activationService;
 
@@ -45,7 +45,7 @@ namespace Koala
                 var commandLine = args as CommandLineActivatedEventArgs;
                 if (commandLine != null)
                 {
-                    CmdArgv = commandLine.Operation.Arguments;
+                    CmdOperation = commandLine.Operation;
                 }
             }
 
