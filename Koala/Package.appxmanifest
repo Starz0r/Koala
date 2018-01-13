@@ -1,64 +1,53 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-
-<Package
-  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
-  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
-  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"  
-  xmlns:genTemplate="http://schemas.microsoft.com/appx/developer/windowsTemplateStudio"
-  IgnorableNamespaces="uap mp genTemplate">
-
-  <Identity
-    Name="17507019-0875-4E82-A7AF-AEB38A45D35F"
-    Publisher="CN=Starz0r"
-    Version="1.0.0.0" />
-
-  <mp:PhoneIdentity PhoneProductId="17507019-0875-4E82-A7AF-AEB38A45D35F" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
-
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5" xmlns:genTemplate="http://schemas.microsoft.com/appx/developer/windowsTemplateStudio" IgnorableNamespaces="uap mp genTemplate">
+  <Identity Name="17507019-0875-4E82-A7AF-AEB38A45D35F" Publisher="CN=Starz0r" Version="1.0.0.0" />
+  <mp:PhoneIdentity PhoneProductId="17507019-0875-4E82-A7AF-AEB38A45D35F" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>Koala</DisplayName>
     <PublisherDisplayName>Starz0r</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
-
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.0.0" MaxVersionTested="10.0.0.0" />
   </Dependencies>
-
   <Resources>
-    <Resource Language="x-generate"/>
+    <Resource Language="x-generate" />
   </Resources>
-
   <Applications>
-    <Application Id="App"
-      Executable="$targetnametoken$.exe"
-      EntryPoint="Koala.App">
-      <uap:VisualElements
-        DisplayName="Koala"
-        Square150x150Logo="Assets\Square150x150Logo.png"
-        Square44x44Logo="Assets\Square44x44Logo.png"
-        Description="Koala"
-        BackgroundColor="transparent">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="Koala.App">
+      <uap:VisualElements DisplayName="Koala" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" Description="Koala" BackgroundColor="transparent">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png">
+        </uap:DefaultTile>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
-
       <Extensions>
-		  <uap5:Extension Category="windows.appExecutionAlias" Executable="Koala.exe" EntryPoint="Koala.App">
-			  <uap5:AppExecutionAlias>
-				  <uap5:ExecutionAlias Alias="Koala.exe" />
-			  </uap5:AppExecutionAlias>
-		  </uap5:Extension>
-	  </Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="mediadec">
+            <uap:DisplayName>Koala</uap:DisplayName>
+            <uap:SupportedFileTypes>
+              <uap:FileType ContentType="video/x-msvideo">.avi</uap:FileType>
+              <uap:FileType ContentType="video/mpeg">.mpeg</uap:FileType>
+              <uap:FileType ContentType="video/ogg">.ogv</uap:FileType>
+              <uap:FileType ContentType="video/webm">.webm</uap:FileType>
+              <uap:FileType ContentType="video/3gpp">.3gp</uap:FileType>
+              <uap:FileType ContentType="video/3gpp2">.3g2</uap:FileType>
+              <uap:FileType ContentType="video/x-matroska">.mkv</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+        <uap5:Extension Category="windows.appExecutionAlias" Executable="Koala.exe" EntryPoint="Koala.App">
+          <uap5:AppExecutionAlias>
+            <uap5:ExecutionAlias Alias="Koala.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+      </Extensions>
     </Application>
   </Applications>
-
   <Capabilities>
     <Capability Name="internetClient" />
   </Capabilities>
-
   <genTemplate:Metadata>
-    <genTemplate:Item Name="generator" Value="Windows Template Studio"/>
+    <genTemplate:Item Name="generator" Value="Windows Template Studio" />
     <genTemplate:Item Name="wizardVersion" Version="v1.5.17334.7" />
     <genTemplate:Item Name="templatesVersion" Version="v1.5.17334.7" />
     <genTemplate:Item Name="projectType" Value="Blank" />
