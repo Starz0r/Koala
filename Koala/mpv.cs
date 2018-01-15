@@ -30,26 +30,32 @@ namespace Koala
             libmpv_gl_context = GetSubApi(1);
         }
 
+        // Creates a new mpv object
         private IntPtr Create()
         {
             return mpv_create();
         }
 
+
+        // Initalizes the mpv object, runs right after getting created
         private MpvErrorCode Initalize(IntPtr mpv_handle)
         {
             return (MpvErrorCode)mpv_initialize(mpv_handle);
         }
 
+        // Sets a an mpv option with the value being a string
         public MpvErrorCode SetOptionString(string option, string value)
         {
             return (MpvErrorCode)mpv_set_option_string(libmpv_handle, GetUtf8Bytes(option), GetUtf8Bytes(value));
         }
 
+        // Gets API Contextes, currently only used to get mpv's OpenGL context, internal use only
         private IntPtr GetSubApi(int value)
         {
             return mpv_get_sub_api(libmpv_handle, value);
         }
 
+        // Executes a command through mpv
         public MpvErrorCode ExecuteCommand(params string[] args)
         {
             IntPtr[] byteArrayPointers;
@@ -63,6 +69,7 @@ namespace Koala
             return result;
         }
 
+        // Returns a corresponding property tuple from mpv
         public Tuple<MpvErrorCode, String> GetProperty(string property)
         {
             IntPtr lpBuffer = IntPtr.Zero;
@@ -71,18 +78,21 @@ namespace Koala
             return Tuple.Create((MpvErrorCode)err, result);
         }
 
+        // Sets a mpv property with the specified value
         public MpvErrorCode SetProperty(string property, MpvFormat format, string value)
         {
             var temp = GetUtf8Bytes(value);
             return (MpvErrorCode)mpv_set_property(libmpv_handle, GetUtf8Bytes(property), (int)format, ref temp);
         }
 
+        // Initalizes the OpenGL Callbacks
         public MpvErrorCode OpenGLCallbackInitialize(byte[] exts, MyGetProcAddress callback, IntPtr fn_context)
         {
             return (MpvErrorCode)mpv_opengl_cb_init_gl(libmpv_gl_context, exts, callback, fn_context);
 
         }
 
+        // Sets OpenGL Update Callback for mpv
         public MpvErrorCode OpenGLCallbackSetUpdate(MyOpenGLCallbackUpdate callback, IntPtr callback_context)
         {
             // Set class members
@@ -95,6 +105,7 @@ namespace Koala
             return (MpvErrorCode)mpv_opengl_cb_set_update_callback(libmpv_gl_context, callback_ptr, callback_context);
         }
 
+        // Executed when the OpenGL Update Callback is requested
         public MpvErrorCode OpenGLCallbackDraw(int framebuffer_object, int width, int height)
         {
             // callback_ptr might get garbage collected if it isn't used too much, so we have to keep it alive this way
@@ -102,15 +113,23 @@ namespace Koala
             return (MpvErrorCode)mpv_opengl_cb_draw(libmpv_gl_context, framebuffer_object, width, height);
         }
 
+        // Reports to mpv that the frame has been rendered, entirely optional
         public MpvErrorCode OpenGLCallbackReportFlip()
         {
             return (MpvErrorCode)mpv_opengl_cb_report_flip(libmpv_gl_context);
         }
 
+        // Renders the OpenGL Callback frame that was returned
         public MpvErrorCode OpenGLCallbackRender()
         {
             return (MpvErrorCode)mpv_opengl_cb_render(libmpv_gl_context);
         }
+
+        public MpvErrorCode StreamCbAddReadOnly(String proto, String userdata, MyStreamCbOpenFn open_fn)
+        {
+            return (MpvErrorCode)mpv_stream_cb_add_ro(libmpv_handle, proto, userdata, open_fn);
+        }
+
         #endregion Methods
 
         #region Helpers
