@@ -4,6 +4,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Windows.Storage;
+using Windows.Storage.Streams;
 
 namespace Koala
 {
@@ -11,8 +13,23 @@ namespace Koala
     {
         #region Definitions
         // Delegates
-        public delegate IntPtr MyGetProcAddress(IntPtr context, string name);
+        public delegate IntPtr MyGetProcAddress(IntPtr context, String name);
         public delegate void MyOpenGLCallbackUpdate(IntPtr context);
+        public delegate Int64 MyStreamCbReadFn(IntPtr cookie, string buf, UInt64 numbytes);
+        public delegate Int64 MyStreamCbSeekFn(IntPtr cookie, Int64 offset);
+        public delegate void MyStreamCbCloseFn(IntPtr cookie);
+        public delegate Int64 MyStreamCbSizeFn(IntPtr cookie);
+        public delegate int MyStreamCbOpenFn(String userdata, String uri, MPV_STREAM_CB_INFO info);
+
+        // Structs
+        public struct MPV_STREAM_CB_INFO
+        {
+            public IntPtr Cookie;
+            public MyStreamCbReadFn ReadFn;
+            public MyStreamCbSeekFn SeekFn;
+            public MyStreamCbSizeFn SizeFn;
+            public MyStreamCbCloseFn CloseFn;
+        }
 
         // Members
         private MyOpenGLCallbackUpdate callback_method;
@@ -240,6 +257,9 @@ namespace Koala
 
         [DllImport(libmpv, EntryPoint = "mpv_set_property", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
         private static extern int mpv_set_property(IntPtr mpv_handle, byte[] name, int format, ref byte[] data);
+
+        [DllImport(libmpv, EntryPoint = "mpv_stream_cb_add_ro", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
+        private static extern int mpv_stream_cb_add_ro(IntPtr mpv_handle, String protocol, String userdata, MyStreamCbOpenFn openfn);
         #endregion Imports
     }
 }
