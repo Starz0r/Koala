@@ -24,6 +24,7 @@
         <uap:Extension Category="windows.fileTypeAssociation">
           <uap:FileTypeAssociation Name="mediadec">
             <uap:DisplayName>Koala</uap:DisplayName>
+            <uap:EditFlags OpenIsSafe="true" />
             <uap:SupportedFileTypes>
               <uap:FileType ContentType="video/x-msvideo">.avi</uap:FileType>
               <uap:FileType ContentType="video/mpeg">.mpeg</uap:FileType>
