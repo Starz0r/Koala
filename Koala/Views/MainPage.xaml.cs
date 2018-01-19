@@ -252,25 +252,12 @@ namespace Koala.Views
         {
             streamcb_userdata = userdata;
 
-            // Allocate the file
-            /*streamcb_file = await StorageFile.GetFileFromPathAsync(userdata);
-            streamcb_current_file_allocated = GCHandle.Alloc(streamcb_file, GCHandleType.Pinned);
-            streamcb_file_pointer = GCHandle.ToIntPtr(streamcb_current_file_allocated);
-            streamcb_stream = File.OpenRead(streamcb_userdata);*/
-
             info.Cookie = streamcb_file_pointer;
             info.ReadFn = StreamCbReadFn;
             info.SeekFn = StreamCbSeekFn;
             info.CloseFn = StreamCbCloseFn;
 
-            /*if (streamcb_file_pointer != IntPtr.Zero)
-            {
-                return 0;
-            }
-            else
-            {
-                return (int)Mpv.MpvErrorCode.MPV_ERROR_LOADING_FAILED;
-            }*/
+            // TODO: Return a MPV_ERROR_LOADING_FAILED if we aren't able to allocate the file to memory
 
             return 0;
         }
@@ -288,7 +275,7 @@ namespace Koala.Views
 
         #region Methods
 
-        private async void InitalizeMpvDynamic()
+        private void InitalizeMpvDynamic()
         {
             mOpenGLES.MakeCurrent(mRenderSurface);
 
@@ -297,28 +284,10 @@ namespace Koala.Views
             Windows.Storage.StorageFolder installationPath = Windows.Storage.ApplicationData.Current.LocalFolder;
             mpv.SetOptionString("log-file", @installationPath.Path + @"\koala.log");
             mpv.SetOptionString("msg-level", "all=v");
-            mpv.SetOptionString("untimed", "");
-            mpv.SetOptionString("framedrop", "decoder");
-            mpv.SetOptionString("hwdec", "auto");
-            mpv.SetOptionString("gpu-hwdec-interop", "all");
             mpv.SetOptionString("vo", "opengl-cb");
 
             mpv.OpenGLCallbackInitialize(null, MyProcAddress, IntPtr.Zero);
             mpv.OpenGLCallbackSetUpdate(DrawNextFrame, IntPtr.Zero);
-
-            mpv.ExecuteCommand("loadfile", "https://clips-media-assets.twitch.tv/AT-179094099-1280x720.mp4");
-
-            /*if (App.FileActivatedArguments != null)
-             {
-                 StorageFile f = await StorageFile.GetFileFromPathAsync(App.FileActivatedArguments.Files[0].Path);
-
-                 //var Dialog = new MessageDialog(App.FileActivatedArguments.Files[0].Path);
-                 //await Dialog.ShowAsync();
-
-                 IBuffer buf = await FileIO.ReadBufferAsync(f);
-
-                 mpv.ExecuteCommand("loadfile", f.Path);
-             }*/
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
