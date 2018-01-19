@@ -3,6 +3,7 @@
 using Koala.Services;
 
 using Windows.ApplicationModel.Activation;
+using Windows.Storage.AccessCache;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -13,6 +14,7 @@ namespace Koala
     public sealed partial class App : Application
     {
         public static CommandLineActivationOperation CmdOperation { get; set; }
+        public static FileActivatedEventArgs FileActivatedArguments { get; set; }
 
         private Lazy<ActivationService> _activationService;
 
@@ -62,10 +64,35 @@ namespace Koala
                 Window.Current.Content = rootFrame;
             }
 
-            rootFrame.Navigate(typeof(Views.MainPage), "OnActivated");
+            rootFrame.Navigate(typeof(Views.MainPage), args);
 
             Window.Current.Activate();
             base.OnActivated(args);
+        }
+
+        protected override async void OnFileActivated(FileActivatedEventArgs args)
+        {
+            // Set Static Propertry and Cache File Paths (TODO: Cache all File Paths and not just one)
+            FileActivatedArguments = args;
+            StorageApplicationPermissions.FutureAccessList.Add(args.Files[0]);
+
+            // Return Control
+            await ActivationService.ActivateAsync(args);
+
+            // Resume Normally
+            Frame rootFrame = Window.Current.Content as Frame;
+
+            if (rootFrame == null)
+            {
+                rootFrame = new Frame();
+                rootFrame.NavigationFailed += OnNavigationFailed;
+                Window.Current.Content = rootFrame;
+            }
+
+            rootFrame.Navigate(typeof(Views.MainPage), args);
+
+            Window.Current.Activate();
+            base.OnFileActivated(args);
         }
 
         void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
