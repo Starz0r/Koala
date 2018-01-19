@@ -33,6 +33,7 @@
               <uap:FileType ContentType="video/3gpp">.3gp</uap:FileType>
               <uap:FileType ContentType="video/3gpp2">.3g2</uap:FileType>
               <uap:FileType ContentType="video/x-matroska">.mkv</uap:FileType>
+              <uap:FileType ContentType="video/mp4">.mp4</uap:FileType>
             </uap:SupportedFileTypes>
           </uap:FileTypeAssociation>
         </uap:Extension>
