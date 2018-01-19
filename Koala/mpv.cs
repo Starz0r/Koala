@@ -15,11 +15,11 @@ namespace Koala
         // Delegates
         public delegate IntPtr MyGetProcAddress(IntPtr context, String name);
         public delegate void MyOpenGLCallbackUpdate(IntPtr context);
-        public delegate Int64 MyStreamCbReadFn(IntPtr cookie, string buf, UInt64 numbytes);
+        public delegate Int64 MyStreamCbReadFn(IntPtr cookie, IntPtr buf, UInt64 numbytes);
         public delegate Int64 MyStreamCbSeekFn(IntPtr cookie, Int64 offset);
         public delegate void MyStreamCbCloseFn(IntPtr cookie);
         public delegate Int64 MyStreamCbSizeFn(IntPtr cookie);
-        public delegate int MyStreamCbOpenFn(String userdata, String uri, MPV_STREAM_CB_INFO info);
+        public delegate int MyStreamCbOpenFn(String userdata, String uri, ref MPV_STREAM_CB_INFO info);
 
         // Structs
         public struct MPV_STREAM_CB_INFO
