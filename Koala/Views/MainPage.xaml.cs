@@ -12,6 +12,15 @@ using Windows.System.Threading;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.ApplicationModel.Activation;
+using Windows.UI.Popups;
+using Windows.Storage;
+using Windows.Storage.Streams;
+using Windows.UI.Xaml.Navigation;
+using System.IO;
+using Windows.Storage.AccessCache;
+using Windows.Storage.Pickers;
 
 namespace Koala.Views
 {
@@ -165,13 +174,12 @@ namespace Koala.Views
         }
 
         private void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
         #endregion Events
 
-        #region Methods
+        #region Delegates
         private IntPtr MyProcAddress(IntPtr context, string name)
         {
-            System.Diagnostics.Debug.WriteLine(name);
-            //System.Diagnostics.Debug.WriteLine(Marshal.PtrToStringAnsi(context));
             return mOpenGLES.GetProcAddress(name);
         }
 
@@ -196,24 +204,154 @@ namespace Koala.Views
             return;
         }
 
-        private IntPtr mpv_handle;
+        public Int64 StreamCbReadFn(IntPtr cookie, IntPtr buf, UInt64 numbytes)
+        {
+            IntPtr fp = cookie;
+            streamcb_buffer_reference = buf;
+            streamcb_buffer_size = numbytes;
 
-        private void InitalizeMpvDynamic()
+            System.Diagnostics.Debug.WriteLine("ReadFn Called");
+            System.Diagnostics.Debug.WriteLine(String.Concat("Position: ", streamcb_stream.Position));
+
+            // * Not 64bit safe :(
+            streamcb_buffer = new Byte[numbytes];
+            int result = streamcb_stream.Read(streamcb_buffer, 0, Convert.ToInt32(numbytes));
+            Marshal.Copy(streamcb_buffer, 0, streamcb_buffer_reference, Convert.ToInt32(numbytes));
+
+            System.Diagnostics.Debug.WriteLine("ReadFn Finished");
+            System.Diagnostics.Debug.WriteLine(String.Concat("Position: ", streamcb_stream.Position));
+
+            // End of File
+            if (result == 0)
+            {
+                return 0;
+            }
+
+            return result;
+
+            // TODO: Add a try/catch to return a -1 on an exception
+        }
+
+        public Int64 StreamCbSeekFn(IntPtr cookie, Int64 offset)
+        {
+            IntPtr fp = cookie;
+
+            System.Diagnostics.Debug.WriteLine("SeekFn Called", "Position: ", streamcb_stream.Position);
+
+            Int64 result = streamcb_stream.Seek(offset, SeekOrigin.Begin);
+
+            return result < 0 ? (Int64)Mpv.MpvErrorCode.MPV_ERROR_GENERIC : result;
+        }
+
+        public void StreamCbCloseFn(IntPtr cookie)
+        {
+            streamcb_stream.Dispose();
+        }
+
+        public int StreamCbOpenFn(String userdata, String uri, ref Mpv.MPV_STREAM_CB_INFO info)
+        {
+            streamcb_userdata = userdata;
+
+            // Allocate the file
+            /*streamcb_file = await StorageFile.GetFileFromPathAsync(userdata);
+            streamcb_current_file_allocated = GCHandle.Alloc(streamcb_file, GCHandleType.Pinned);
+            streamcb_file_pointer = GCHandle.ToIntPtr(streamcb_current_file_allocated);
+            streamcb_stream = File.OpenRead(streamcb_userdata);*/
+
+            info.Cookie = streamcb_file_pointer;
+            info.ReadFn = StreamCbReadFn;
+            info.SeekFn = StreamCbSeekFn;
+            info.CloseFn = StreamCbCloseFn;
+
+            /*if (streamcb_file_pointer != IntPtr.Zero)
+            {
+                return 0;
+            }
+            else
+            {
+                return (int)Mpv.MpvErrorCode.MPV_ERROR_LOADING_FAILED;
+            }*/
+
+            return 0;
+        }
+
+        private GCHandle streamcb_current_file_allocated;
+        private StorageFile streamcb_file;
+        private IntPtr streamcb_file_pointer = IntPtr.Zero;
+        private String streamcb_userdata;
+        private Stream streamcb_stream;
+        private Byte[] streamcb_buffer;
+        private UInt64 streamcb_buffer_size;
+        private IntPtr streamcb_buffer_reference;
+
+        #endregion Delegates
+
+        #region Methods
+
+        private async void InitalizeMpvDynamic()
         {
             mOpenGLES.MakeCurrent(mRenderSurface);
 
             mpv = new Mpv();
 
-            Windows.Storage.StorageFolder storageFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
-            mpv.SetOptionString("log-file", @storageFolder.Path + @"\koala.log");
+            Windows.Storage.StorageFolder installationPath = Windows.Storage.ApplicationData.Current.LocalFolder;
+            mpv.SetOptionString("log-file", @installationPath.Path + @"\koala.log");
             mpv.SetOptionString("msg-level", "all=v");
+            mpv.SetOptionString("untimed", "");
+            mpv.SetOptionString("framedrop", "decoder");
+            mpv.SetOptionString("hwdec", "auto");
+            mpv.SetOptionString("gpu-hwdec-interop", "all");
             mpv.SetOptionString("vo", "opengl-cb");
 
             mpv.OpenGLCallbackInitialize(null, MyProcAddress, IntPtr.Zero);
             mpv.OpenGLCallbackSetUpdate(DrawNextFrame, IntPtr.Zero);
 
-            mpv.ExecuteCommand("loadfile", "http://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_640x360.m4v");
+            mpv.ExecuteCommand("loadfile", "https://clips-media-assets.twitch.tv/AT-179094099-1280x720.mp4");
 
+            /*if (App.FileActivatedArguments != null)
+             {
+                 StorageFile f = await StorageFile.GetFileFromPathAsync(App.FileActivatedArguments.Files[0].Path);
+
+                 //var Dialog = new MessageDialog(App.FileActivatedArguments.Files[0].Path);
+                 //await Dialog.ShowAsync();
+
+                 IBuffer buf = await FileIO.ReadBufferAsync(f);
+
+                 mpv.ExecuteCommand("loadfile", f.Path);
+             }*/
+        }
+
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            InitializeComponent();
+
+            var args = e.Parameter as IActivatedEventArgs;
+
+            // Check if any arguments were passed
+            if (args != null)
+            {
+                // Open with...
+                if (args.Kind == ActivationKind.File)
+                {
+                    // Get the first file
+                    // TODO: Get all the files and put them in a collection
+                    var fileArgs = args as FileActivatedEventArgs;
+                    string strFilePath = fileArgs.Files[0].Path;
+                    var file = (StorageFile)fileArgs.Files[0];
+
+                    streamcb_file = (StorageFile)fileArgs.Files[0];
+                    await Task.Run(() =>
+                    {
+                        Task<Stream> tmp = streamcb_file.OpenStreamForReadAsync();
+                        streamcb_stream = tmp.Result;
+                    });
+
+                    mpv.StreamCbAddReadOnly("buffer", strFilePath, StreamCbOpenFn);
+                    mpv.ExecuteCommand("loadfile", "buffer://fake");
+                }
+            }
         }
         #endregion Methods
     }
