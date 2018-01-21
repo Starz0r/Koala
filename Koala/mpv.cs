@@ -25,10 +25,10 @@ namespace Koala
         public struct MPV_STREAM_CB_INFO
         {
             public IntPtr Cookie;
-            public MyStreamCbReadFn ReadFn;
-            public MyStreamCbSeekFn SeekFn;
-            public MyStreamCbSizeFn SizeFn;
-            public MyStreamCbCloseFn CloseFn;
+            public IntPtr ReadFn;
+            public IntPtr SeekFn;
+            public IntPtr SizeFn;
+            public IntPtr CloseFn;
         }
 
         // Members

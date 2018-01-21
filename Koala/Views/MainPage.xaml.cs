@@ -210,16 +210,10 @@ namespace Koala.Views
             streamcb_buffer_reference = buf;
             streamcb_buffer_size = numbytes;
 
-            System.Diagnostics.Debug.WriteLine("ReadFn Called");
-            System.Diagnostics.Debug.WriteLine(String.Concat("Position: ", streamcb_stream.Position));
-
             // * Not 64bit safe :(
             streamcb_buffer = new Byte[numbytes];
             int result = streamcb_stream.Read(streamcb_buffer, 0, Convert.ToInt32(numbytes));
-            Marshal.Copy(streamcb_buffer, 0, streamcb_buffer_reference, Convert.ToInt32(numbytes));
-
-            System.Diagnostics.Debug.WriteLine("ReadFn Finished");
-            System.Diagnostics.Debug.WriteLine(String.Concat("Position: ", streamcb_stream.Position));
+            Marshal.Copy(streamcb_buffer, 0, streamcb_buffer_reference, result);
 
             // End of File
             if (result == 0)
@@ -236,11 +230,14 @@ namespace Koala.Views
         {
             IntPtr fp = cookie;
 
-            System.Diagnostics.Debug.WriteLine("SeekFn Called", "Position: ", streamcb_stream.Position);
-
             Int64 result = streamcb_stream.Seek(offset, SeekOrigin.Begin);
 
             return result < 0 ? (Int64)Mpv.MpvErrorCode.MPV_ERROR_GENERIC : result;
+        }
+
+        public Int64 StreamCbSizeFn(IntPtr cookie)
+        {
+            return streamcb_stream.Length;
         }
 
         public void StreamCbCloseFn(IntPtr cookie)
@@ -250,12 +247,32 @@ namespace Koala.Views
 
         public int StreamCbOpenFn(String userdata, String uri, ref Mpv.MPV_STREAM_CB_INFO info)
         {
+            // Store File Path
             streamcb_userdata = userdata;
 
+            // Allocate Methods
+            streamcb_callback_read_method = StreamCbReadFn;
+            streamcb_callback_read_ptr = Marshal.GetFunctionPointerForDelegate(streamcb_callback_read_method);
+            streamcb_callback_read_gc = GCHandle.Alloc(streamcb_callback_read_ptr, GCHandleType.Pinned);
+
+            streamcb_callback_seek_method = StreamCbSeekFn;
+            streamcb_callback_seek_ptr = Marshal.GetFunctionPointerForDelegate(streamcb_callback_seek_method);
+            streamcb_callback_seek_gc = GCHandle.Alloc(streamcb_callback_seek_ptr, GCHandleType.Pinned);
+
+            streamcb_callback_size_method = StreamCbSizeFn;
+            streamcb_callback_size_ptr = Marshal.GetFunctionPointerForDelegate(streamcb_callback_size_method);
+            streamcb_callback_size_gc = GCHandle.Alloc(streamcb_callback_size_ptr, GCHandleType.Pinned);
+
+            streamcb_callback_close_method = StreamCbCloseFn;
+            streamcb_callback_close_ptr = Marshal.GetFunctionPointerForDelegate(streamcb_callback_close_method);
+            streamcb_callback_close_gc = GCHandle.Alloc(streamcb_callback_close_ptr, GCHandleType.Pinned);
+
+            // Set Struct Methods
             info.Cookie = streamcb_file_pointer;
-            info.ReadFn = StreamCbReadFn;
-            info.SeekFn = StreamCbSeekFn;
-            info.CloseFn = StreamCbCloseFn;
+            info.ReadFn = streamcb_callback_read_ptr;
+            info.SeekFn = streamcb_callback_seek_ptr;
+            info.SizeFn = streamcb_callback_size_ptr;
+            info.CloseFn = streamcb_callback_close_ptr;
 
             // TODO: Return a MPV_ERROR_LOADING_FAILED if we aren't able to allocate the file to memory
 
@@ -270,6 +287,22 @@ namespace Koala.Views
         private Byte[] streamcb_buffer;
         private UInt64 streamcb_buffer_size;
         private IntPtr streamcb_buffer_reference;
+
+        private Mpv.MyStreamCbReadFn streamcb_callback_read_method;
+        private IntPtr streamcb_callback_read_ptr;
+        private GCHandle streamcb_callback_read_gc;
+
+        private Mpv.MyStreamCbSeekFn streamcb_callback_seek_method;
+        private IntPtr streamcb_callback_seek_ptr;
+        private GCHandle streamcb_callback_seek_gc;
+
+        private Mpv.MyStreamCbSizeFn streamcb_callback_size_method;
+        private IntPtr streamcb_callback_size_ptr;
+        private GCHandle streamcb_callback_size_gc;
+
+        private Mpv.MyStreamCbCloseFn streamcb_callback_close_method;
+        private IntPtr streamcb_callback_close_ptr;
+        private GCHandle streamcb_callback_close_gc;
 
         #endregion Delegates
 
