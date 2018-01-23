@@ -34,6 +34,31 @@ namespace Koala.Views
         private IAsyncAction mRenderLoopWorker;
         Mpv mpv;
 
+        private GCHandle streamcb_current_file_allocated;
+        private StorageFile streamcb_file;
+        private IntPtr streamcb_file_pointer = IntPtr.Zero;
+        private String streamcb_userdata;
+        private Stream streamcb_stream;
+        private Byte[] streamcb_buffer;
+        private UInt64 streamcb_buffer_size;
+        private IntPtr streamcb_buffer_reference;
+
+        private Mpv.MyStreamCbReadFn streamcb_callback_read_method;
+        private IntPtr streamcb_callback_read_ptr;
+        private GCHandle streamcb_callback_read_gc;
+
+        private Mpv.MyStreamCbSeekFn streamcb_callback_seek_method;
+        private IntPtr streamcb_callback_seek_ptr;
+        private GCHandle streamcb_callback_seek_gc;
+
+        private Mpv.MyStreamCbSizeFn streamcb_callback_size_method;
+        private IntPtr streamcb_callback_size_ptr;
+        private GCHandle streamcb_callback_size_gc;
+
+        private Mpv.MyStreamCbCloseFn streamcb_callback_close_method;
+        private IntPtr streamcb_callback_close_ptr;
+        private GCHandle streamcb_callback_close_gc;
+
         #endregion Definitions
 
         #region Events
@@ -278,31 +303,6 @@ namespace Koala.Views
 
             return 0;
         }
-
-        private GCHandle streamcb_current_file_allocated;
-        private StorageFile streamcb_file;
-        private IntPtr streamcb_file_pointer = IntPtr.Zero;
-        private String streamcb_userdata;
-        private Stream streamcb_stream;
-        private Byte[] streamcb_buffer;
-        private UInt64 streamcb_buffer_size;
-        private IntPtr streamcb_buffer_reference;
-
-        private Mpv.MyStreamCbReadFn streamcb_callback_read_method;
-        private IntPtr streamcb_callback_read_ptr;
-        private GCHandle streamcb_callback_read_gc;
-
-        private Mpv.MyStreamCbSeekFn streamcb_callback_seek_method;
-        private IntPtr streamcb_callback_seek_ptr;
-        private GCHandle streamcb_callback_seek_gc;
-
-        private Mpv.MyStreamCbSizeFn streamcb_callback_size_method;
-        private IntPtr streamcb_callback_size_ptr;
-        private GCHandle streamcb_callback_size_gc;
-
-        private Mpv.MyStreamCbCloseFn streamcb_callback_close_method;
-        private IntPtr streamcb_callback_close_ptr;
-        private GCHandle streamcb_callback_close_gc;
 
         #endregion Delegates
 
