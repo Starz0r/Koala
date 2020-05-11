@@ -143,7 +143,7 @@ namespace Koala.Views
             }
 
             // Run task on a dedicated high priority background thread.
-            mRenderLoopWorker = ThreadPool.RunAsync(RenderLoop, WorkItemPriority.High, WorkItemOptions.TimeSliced);
+            mRenderLoopWorker = Windows.System.Threading.ThreadPool.RunAsync(RenderLoop, WorkItemPriority.Normal, WorkItemOptions.TimeSliced);
         }
 
         private void RenderLoop(IAsyncAction action)
