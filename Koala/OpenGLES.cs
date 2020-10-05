@@ -271,11 +271,26 @@ namespace Koala
             }
         }
 
+        private object mRenderSurface = new System.Threading.Mutex();
         public void MakeCurrent(EGLSurface surface)
         {
-            if (eglMakeCurrent(mEglDisplay, surface, surface, mEglContext) == EGL_FALSE)
+            // sometimes we have two or more threads try to call this function
+            lock (mRenderSurface)
             {
-                throw new Exception("Failed to make EGLSurface current");
+                glbool success = EGL_FALSE;
+                while (success == EGL_FALSE)
+                {
+                    System.Diagnostics.Debug.WriteLine("Attaching an EGL rendering context to the surface");
+                    try
+                    {
+                        success = eglMakeCurrent(mEglDisplay, surface, surface, mEglContext);
+                    }
+                    catch (SystemException)
+                    {
+                        success = EGL_FALSE;
+                    }
+                    System.Diagnostics.Debug.WriteLine(success);
+                }
             }
         }
 
