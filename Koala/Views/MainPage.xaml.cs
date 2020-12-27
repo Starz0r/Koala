@@ -21,168 +21,16 @@ using Windows.UI.Xaml.Navigation;
 using System.IO;
 using Windows.Storage.AccessCache;
 using Windows.Storage.Pickers;
+using System.Globalization;
 
 namespace Koala.Views
 {
     public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
-        #region Definitions
-
-        private IntPtr mRenderSurface;
-        private OpenGLES mOpenGLES;
-        private object mRenderSurfaceCriticalSection = new object();
-        private IAsyncAction mRenderLoopWorker;
-        Mpv mpv;
-
-        private GCHandle streamcb_current_file_allocated;
-        private StorageFile streamcb_file;
-        private IntPtr streamcb_file_pointer = IntPtr.Zero;
-        private String streamcb_userdata;
-        private Stream streamcb_stream;
-        private Byte[] streamcb_buffer;
-        private UInt64 streamcb_buffer_size;
-        private IntPtr streamcb_buffer_reference;
-
-        private Mpv.MyStreamCbReadFn streamcb_callback_read_method;
-        private IntPtr streamcb_callback_read_ptr;
-        private GCHandle streamcb_callback_read_gc;
-
-        private Mpv.MyStreamCbSeekFn streamcb_callback_seek_method;
-        private IntPtr streamcb_callback_seek_ptr;
-        private GCHandle streamcb_callback_seek_gc;
-
-        private Mpv.MyStreamCbSizeFn streamcb_callback_size_method;
-        private IntPtr streamcb_callback_size_ptr;
-        private GCHandle streamcb_callback_size_gc;
-
-        private Mpv.MyStreamCbCloseFn streamcb_callback_close_method;
-        private IntPtr streamcb_callback_close_ptr;
-        private GCHandle streamcb_callback_close_gc;
-
-        #endregion Definitions
-
-        #region Events
+        #region Properties
         public MainPage()
         {
             InitializeComponent();
-
-            mOpenGLES = new OpenGLES();
-            mRenderSurface = OpenGLES.EGL_NO_SURFACE;
-
-            Window.Current.VisibilityChanged += OnVisibilityChanged;
-
-            Loaded += OnPageLoaded;
-            Unloaded += OnPageUnloaded;
-        }
-
-
-        private void OnPageLoaded(object sender, RoutedEventArgs e)
-        {
-            // The SwapChainPanel has been created and arranged in the page layout, so EGL can be initialized. 
-            CreateRenderSurface();
-            StartRenderLoop();
-            InitalizeMpvDynamic();
-        }
-
-        private void OnPageUnloaded(object sender, RoutedEventArgs e)
-        {
-            StopRenderLoop();
-            DestroyRenderSurface();
-        }
-
-        private void OnVisibilityChanged(object sender, VisibilityChangedEventArgs e)
-        {
-            if (e.Visible && mRenderSurface != OpenGLES.EGL_NO_SURFACE)
-            {
-                StartRenderLoop();
-            }
-            else
-            {
-                StopRenderLoop();
-            }
-        }
-
-        private void CreateRenderSurface()
-        {
-            if (mOpenGLES != null && mRenderSurface == OpenGLES.EGL_NO_SURFACE)
-            {
-                mRenderSurface = mOpenGLES.CreateSurface(videoBox);
-            }
-        }
-
-        private void DestroyRenderSurface()
-        {
-            if (mOpenGLES == null)
-            {
-                mOpenGLES.DestroySurface(mRenderSurface);
-            }
-            mRenderSurface = OpenGLES.EGL_NO_SURFACE;
-        }
-
-        private void RecoverFromLostDevice()
-        {
-            // Stops the render loop, reset OpenGLES, recreates the render surface
-            // and starts the render loop again to recover from a lost device.
-            StopRenderLoop();
-
-            lock (mRenderSurfaceCriticalSection)
-            {
-                DestroyRenderSurface();
-                mOpenGLES.Reset();
-                CreateRenderSurface();
-            }
-            StartRenderLoop();
-        }
-
-        private void StartRenderLoop()
-        {
-            // If the render loop is already running then do not start another thread
-            if (mRenderLoopWorker != null && mRenderLoopWorker.Status == AsyncStatus.Started)
-            {
-                return;
-            }
-
-            // Run task on a dedicated high priority background thread.
-            mRenderLoopWorker = Windows.System.Threading.ThreadPool.RunAsync(RenderLoop, WorkItemPriority.Normal, WorkItemOptions.TimeSliced);
-        }
-
-        private void RenderLoop(IAsyncAction action)
-        {
-            lock (mRenderSurfaceCriticalSection)
-            {
-                mOpenGLES.MakeCurrent(mRenderSurface);
-
-                SimpleRenderer renderer = new SimpleRenderer();
-
-                while (action.Status == AsyncStatus.Started)
-                {
-                    var size = mOpenGLES.GetSurfaceDimensions(mRenderSurface);
-
-                    // Logic to update the scene could go here
-                    
-                    renderer.UpdateWindowSize(size);
-                    renderer.Draw();
-
-                    // The call to the eglSawpBuffers might not be successful (i.e. due to Device Lost)
-                    // If the call fails, then we must reinitialize EGL and the GL resources.
-                    if (mOpenGLES.SwapBuffers(mRenderSurface) != OpenGLES.EGL_TRUE)
-                    {
-                        // XAML objects like the SwapChainPanel must only be manipulated on the UI thread.
-                        videoBox.Dispatcher.RunAsync(CoreDispatcherPriority.High, new DispatchedHandler(() => { RecoverFromLostDevice(); }));
-
-                        return;
-                    }
-                }
-            }
-        }
-
-        private void StopRenderLoop()
-        {
-            if (mRenderLoopWorker != null)
-            {
-                mRenderLoopWorker.Cancel();
-                mRenderLoopWorker = null;
-            }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -199,130 +47,9 @@ namespace Koala.Views
         }
 
         private void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        #endregion Properties
 
-        #endregion Events
-
-        #region Delegates
-        private IntPtr MyProcAddress(IntPtr context, string name)
-        {
-            return mOpenGLES.GetProcAddress(name);
-        }
-
-        private async void DrawNextFrame(IntPtr context)
-        {
-            // Wait for the UI Thread to run to render the next frame.
-            await videoBox.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, new DispatchedHandler(() =>
-            {
-                // Get the Width and Height of the Window (it can change at anytime)
-                int w = (int)((Frame)Window.Current.Content).ActualWidth;
-                int h = (int)((Frame)Window.Current.Content).ActualHeight;
-
-                // Draw the next frame, swap buffers, and report the frame has been flipped
-                mpv.OpenGLCallbackDraw(0, w, -h);
-                mOpenGLES.SwapBuffers(mRenderSurface);
-                mpv.OpenGLCallbackReportFlip();
-
-                // Stop the render loop to prevent the frame from being overwritten
-                StopRenderLoop();
-            }));
-
-            return;
-        }
-
-        public Int64 StreamCbReadFn(IntPtr cookie, IntPtr buf, UInt64 numbytes)
-        {
-            IntPtr fp = cookie;
-            streamcb_buffer_reference = buf;
-            streamcb_buffer_size = numbytes;
-
-            // * Not 64bit safe :(
-            streamcb_buffer = new Byte[numbytes];
-            int result = streamcb_stream.Read(streamcb_buffer, 0, Convert.ToInt32(numbytes));
-            Marshal.Copy(streamcb_buffer, 0, streamcb_buffer_reference, result);
-
-            // End of File
-            if (result == 0)
-            {
-                return 0;
-            }
-
-            return result;
-
-            // TODO: Add a try/catch to return a -1 on an exception
-        }
-
-        public Int64 StreamCbSeekFn(IntPtr cookie, Int64 offset)
-        {
-            IntPtr fp = cookie;
-
-            Int64 result = streamcb_stream.Seek(offset, SeekOrigin.Begin);
-
-            return result < 0 ? (Int64)Mpv.MpvErrorCode.MPV_ERROR_GENERIC : result;
-        }
-
-        public Int64 StreamCbSizeFn(IntPtr cookie)
-        {
-            return streamcb_stream.Length;
-        }
-
-        public void StreamCbCloseFn(IntPtr cookie)
-        {
-            streamcb_stream.Dispose();
-        }
-
-        public int StreamCbOpenFn(String userdata, String uri, ref Mpv.MPV_STREAM_CB_INFO info)
-        {
-            // Store File Path
-            streamcb_userdata = userdata;
-
-            // Allocate Methods
-            streamcb_callback_read_method = StreamCbReadFn;
-            streamcb_callback_read_ptr = Marshal.GetFunctionPointerForDelegate(streamcb_callback_read_method);
-            streamcb_callback_read_gc = GCHandle.Alloc(streamcb_callback_read_ptr, GCHandleType.Pinned);
-
-            streamcb_callback_seek_method = StreamCbSeekFn;
-            streamcb_callback_seek_ptr = Marshal.GetFunctionPointerForDelegate(streamcb_callback_seek_method);
-            streamcb_callback_seek_gc = GCHandle.Alloc(streamcb_callback_seek_ptr, GCHandleType.Pinned);
-
-            streamcb_callback_size_method = StreamCbSizeFn;
-            streamcb_callback_size_ptr = Marshal.GetFunctionPointerForDelegate(streamcb_callback_size_method);
-            streamcb_callback_size_gc = GCHandle.Alloc(streamcb_callback_size_ptr, GCHandleType.Pinned);
-
-            streamcb_callback_close_method = StreamCbCloseFn;
-            streamcb_callback_close_ptr = Marshal.GetFunctionPointerForDelegate(streamcb_callback_close_method);
-            streamcb_callback_close_gc = GCHandle.Alloc(streamcb_callback_close_ptr, GCHandleType.Pinned);
-
-            // Set Struct Methods
-            info.Cookie = streamcb_file_pointer;
-            info.ReadFn = streamcb_callback_read_ptr;
-            info.SeekFn = streamcb_callback_seek_ptr;
-            info.SizeFn = streamcb_callback_size_ptr;
-            info.CloseFn = streamcb_callback_close_ptr;
-
-            // TODO: Return a MPV_ERROR_LOADING_FAILED if we aren't able to allocate the file to memory
-
-            return 0;
-        }
-
-        #endregion Delegates
-
-        #region Methods
-
-        private void InitalizeMpvDynamic()
-        {
-            mOpenGLES.MakeCurrent(mRenderSurface);
-
-            mpv = new Mpv();
-
-            Windows.Storage.StorageFolder installationPath = Windows.Storage.ApplicationData.Current.LocalFolder;
-            mpv.SetOptionString("log-file", @installationPath.Path + @"\koala.log");
-            mpv.SetOptionString("msg-level", "all=v");
-            mpv.SetOptionString("vo", "opengl-cb");
-
-            mpv.OpenGLCallbackInitialize(null, MyProcAddress, IntPtr.Zero);
-            mpv.OpenGLCallbackSetUpdate(DrawNextFrame, IntPtr.Zero);
-        }
-
+        #region Events
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
@@ -343,18 +70,38 @@ namespace Koala.Views
                     string strFilePath = fileArgs.Files[0].Path;
                     var file = (StorageFile)fileArgs.Files[0];
 
-                    streamcb_file = (StorageFile)fileArgs.Files[0];
+                    VideoPlayer.streamcb_file = (StorageFile)fileArgs.Files[0];
                     await Task.Run(() =>
                     {
-                        Task<Stream> tmp = streamcb_file.OpenStreamForReadAsync();
-                        streamcb_stream = tmp.Result;
+                        Task<Stream> tmp = VideoPlayer.streamcb_file.OpenStreamForReadAsync();
+                        VideoPlayer.streamcb_stream = tmp.Result;
                     });
 
-                    mpv.StreamCbAddReadOnly("buffer", strFilePath, StreamCbOpenFn);
-                    mpv.ExecuteCommand("loadfile", "buffer://fake");
+                    while (VideoPlayer.MediaPlayer == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Internal MediaPlayer Core still uninitialized, waiting...");
+                    }
+
+                    VideoPlayer.MediaPlayer.StreamCbAddReadOnly("buffer", strFilePath, VideoPlayer.StreamCbOpenFn);
+                    VideoPlayer.MediaPlayer.ExecuteCommand("loadfile", "buffer://fake");
+
+                    var prop = VideoPlayer.MediaPlayer.GetProperty("duration");
+                    while (prop == null) {
+                        System.Diagnostics.Debug.WriteLine("property was null, retrying");
+                        prop = VideoPlayer.MediaPlayer.GetProperty("duration");
+                    }
+                    Double duration = Double.Parse(prop, CultureInfo.InvariantCulture.NumberFormat);
+                    prop = VideoPlayer.MediaPlayer.GetProperty("demuxer-rawvideo-fps");
+                    while (prop == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("property was null, retrying");
+                        prop = VideoPlayer.MediaPlayer.GetProperty("duration");
+                    }
+                    Double fps = Double.Parse(prop, CultureInfo.InvariantCulture.NumberFormat);
+                    VideoControls.SetSliderDuration(duration, 1/fps);
                 }
             }
         }
-        #endregion Methods
+        #endregion Events
     }
 }
