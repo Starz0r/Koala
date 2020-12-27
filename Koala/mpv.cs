@@ -1,17 +1,21 @@
-﻿using System;
+﻿using Koala.ViewModels;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using Windows.UI.Core;
 
 namespace Koala
 {
-    public class Mpv
+    public sealed class Mpv
     {
-        #region Definitions
+        #region Properties
         // Delegates
         public delegate IntPtr MyGetProcAddress(IntPtr context, String name);
         public delegate void MyOpenGLCallbackUpdate(IntPtr context);
@@ -37,7 +41,9 @@ namespace Koala
         private IntPtr callback_ptr;
         private IntPtr libmpv_handle;
         private IntPtr libmpv_gl_context;
-        #endregion Definitions
+
+        private MediaElement.MediaState cstate = MediaElement.MediaState.Playing;
+        #endregion Properties
 
         #region Methods
         public Mpv()
@@ -96,15 +102,14 @@ namespace Koala
         // Sets a mpv property with the specified value
         public MpvErrorCode SetProperty(string property, MpvFormat format, string value)
         {
-            var temp = GetUtf8Bytes(value);
-            return (MpvErrorCode)mpv_set_property(libmpv_handle, GetUtf8Bytes(property), (int)format, ref temp);
+            var data = GetUtf8Bytes(value);
+            return (MpvErrorCode)mpv_set_property(libmpv_handle, GetUtf8Bytes(property), (int)format, ref data);
         }
 
         // Initalizes the OpenGL Callbacks
         public MpvErrorCode OpenGLCallbackInitialize(byte[] exts, MyGetProcAddress callback, IntPtr fn_context)
         {
             return (MpvErrorCode)mpv_opengl_cb_init_gl(libmpv_gl_context, exts, callback, fn_context);
-
         }
 
         // Sets OpenGL Update Callback for mpv
@@ -125,7 +130,9 @@ namespace Koala
         {
             // callback_ptr might get garbage collected if it isn't used too much, so we have to keep it alive this way
             callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback_method);
+
             return (MpvErrorCode)mpv_opengl_cb_draw(libmpv_gl_context, framebuffer_object, width, height);
+
         }
 
         // Reports to mpv that the frame has been rendered, entirely optional
@@ -167,6 +174,53 @@ namespace Koala
             }
             Marshal.Copy(byteArrayPointers, 0, rootPointer, numberOfStrings);
             return rootPointer;
+        }
+
+        internal void Pause()
+        {
+            SetProperty("pause", MpvFormat.MPV_FORMAT_STRING, "yes");
+            cstate = MediaElement.MediaState.Paused;
+        }
+
+        internal void UnpauseResume()
+        {
+            SetProperty("pause", MpvFormat.MPV_FORMAT_STRING, "no");
+            cstate = MediaElement.MediaState.Playing;
+        }
+
+        internal float scale()
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void setScale(float value)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal MediaElement.MediaState state()
+        {
+            return cstate;
+        }
+
+        internal void setVolume(Int64 vol)
+        {
+            //throw new NotImplementedException();
+            SetProperty("volume", MpvFormat.MPV_FORMAT_DOUBLE, vol.ToString(CultureInfo.InvariantCulture));
+        }
+
+        internal int length()
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void setPosition(float v)
+        {
+            System.Diagnostics.Debug.WriteLine("Setting position");
+            UInt64 secs = (UInt64)Math.Floor(v);
+            string pos = secs.ToString(CultureInfo.InvariantCulture);
+            var err = ExecuteCommand("seek", pos, "absolute");
+            Debug.WriteLine(err);
         }
         #endregion Helpers
 
@@ -258,6 +312,7 @@ namespace Koala
 
         [DllImport(libmpv, EntryPoint = "mpv_stream_cb_add_ro", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false, CallingConvention = CallingConvention.Cdecl)]
         private static extern int mpv_stream_cb_add_ro(IntPtr mpv_handle, String protocol, String userdata, MyStreamCbOpenFn openfn);
+
         #endregion Imports
     }
 }
