@@ -33,7 +33,7 @@ namespace Koala
 
         public void Draw()
         {
-            glClearColor(1, 0, 0, 1);
+            glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
 
@@ -42,8 +42,17 @@ namespace Koala
             glViewport(0, 0, (int)size.Width, (int)size.Height);
         }
 
+        public Int32[] GetWindowSize()
+        {
+            Int32[] viewport = new int[4];
+            glGetIntegerv(GL_VIEWPORT, ref viewport);
+            return viewport;
+        }
+
         private const string libGLESv2 = "libGLESv2.dll";
 
+        // Other Enums
+        public const int GL_VIEWPORT = 0x0BA2;
 
         // ClearBufferMask
         public const int GL_DEPTH_BUFFER_BIT = 0x00000100;
@@ -64,5 +73,7 @@ namespace Koala
         public static extern void glClearColor(float red, float green, float blue, float alpha);
         [DllImport(libGLESv2)]
         public static extern void glClear(int mask);
+        [DllImport(libGLESv2)]
+        public static extern void glGetIntegerv(Int32 pname, ref int[] pparams);
     }
 }
