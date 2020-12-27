@@ -70,6 +70,26 @@ namespace Koala
         public const int EGL_PLATFORM_ANGLE_DEVICE_TYPE_REFERENCE_ANGLE = 0x320C;
         public const int EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE = 0x320F;
 
+        public enum EGLError
+        {
+            EGL_SUCCESS = 0x3000,
+            EGL_NOT_INITIALIZED = 0x3001,
+            EGL_NON_CONFORMANT_CONFIG = 0x3051,
+            EGL_BAD_ACCESS = 0x3002,
+            EGL_BAD_ALLOC = 0x3003,
+            EGL_BAD_ATTRIBUTE = 0x3004,
+            EGL_BAD_CONTEXT = 0x3006,
+            EGL_BAD_CONFIG = 0x3005,
+            EGL_BAD_CURRENT_SURFACE = 0x3007,
+            EGL_BAD_DISPLAY = 0x3008,
+            EGL_BAD_SURFACE = 0x300D,
+            EGL_BAD_MATCH = 0x3009,
+            EGL_BAD_PARAMETER = 0x300C,
+            EGL_BAD_NATIVE_PIXMAP = 0x300A,
+            EGL_BAD_NATIVE_WINDOW = 0x300B,
+            EGL_CONTEXT_LOST = 0x300E
+        };
+
 
         // fields
 
@@ -317,6 +337,11 @@ namespace Koala
             return eglGetProcAddress(procname);
         }
 
+        public EGLError GetLastError()
+        {
+            return eglGetError();
+        }
+
         public void Reset()
         {
             Cleanup();
@@ -365,5 +390,8 @@ namespace Koala
 
         [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
         public static extern EGLContext eglGetCurrentContext();
+
+        [DllImport(libEGL, SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = false)]
+        public static extern EGLError eglGetError();
     }
 }
