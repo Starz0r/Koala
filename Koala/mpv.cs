@@ -163,10 +163,21 @@ namespace Koala
         {
             lock (mpvLock)
             {
-                // callback_ptr might get garbage collected if it isn't used too much, so we have to keep it alive this way
-                callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback_method);
+                try
+                {
+                    // callback_ptr might get garbage collected if it isn't used too much, so we have to keep it alive this way
+                    callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback_method);
 
-                return (MpvErrorCode)mpv_opengl_cb_draw(libmpv_gl_context, framebuffer_object, width, height);
+                    return (MpvErrorCode)mpv_opengl_cb_draw(libmpv_gl_context, framebuffer_object, width, height);
+                }
+                catch (System.DivideByZeroException)
+                {
+                    return MpvErrorCode.MPV_ERROR_GENERIC;
+                }
+                catch (System.AccessViolationException)
+                {
+                    return MpvErrorCode.MPV_ERROR_GENERIC;
+                }
             }
 
         }
