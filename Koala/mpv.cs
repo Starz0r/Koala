@@ -42,40 +42,57 @@ namespace Koala
         private IntPtr libmpv_handle;
         private IntPtr libmpv_gl_context;
 
+        private readonly object mpvLock = new object();
+
         private MediaElement.MediaState cstate = MediaElement.MediaState.Playing;
         #endregion Properties
 
         #region Methods
         public Mpv()
         {
-            libmpv_handle = mpv_create();
-            Initalize(libmpv_handle);
-            libmpv_gl_context = GetSubApi(1);
+            lock (mpvLock)
+            {
+                libmpv_handle = mpv_create();
+                Initalize(libmpv_handle);
+                libmpv_gl_context = GetSubApi(1);
+            }
         }
 
         // Creates a new mpv object
         private IntPtr Create()
         {
-            return mpv_create();
+            lock (mpvLock)
+            {
+                return mpv_create();
+            }
         }
 
 
         // Initalizes the mpv object, runs right after getting created
         private MpvErrorCode Initalize(IntPtr mpv_handle)
         {
-            return (MpvErrorCode)mpv_initialize(mpv_handle);
+            lock (mpvLock)
+            {
+                return (MpvErrorCode)mpv_initialize(mpv_handle);
+            }
         }
 
         // Sets a an mpv option with the value being a string
         public MpvErrorCode SetOptionString(string option, string value)
         {
-            return (MpvErrorCode)mpv_set_option_string(libmpv_handle, GetUtf8Bytes(option), GetUtf8Bytes(value));
+            lock (mpvLock)
+            {
+                return (MpvErrorCode)mpv_set_option_string(libmpv_handle, GetUtf8Bytes(option), GetUtf8Bytes(value));
+            }
         }
 
         // Gets API Contextes, currently only used to get mpv's OpenGL context, internal use only
         private IntPtr GetSubApi(int value)
         {
-            return mpv_get_sub_api(libmpv_handle, value);
+            lock (mpvLock)
+            {
+                return mpv_get_sub_api(libmpv_handle, value);
+            }
         }
 
         // Executes a command through mpv
@@ -83,7 +100,11 @@ namespace Koala
         {
             IntPtr[] byteArrayPointers;
             var mainPtr = AllocateUtf8IntPtrArrayWithSentinel(args, out byteArrayPointers);
-            MpvErrorCode result = (MpvErrorCode)mpv_command(libmpv_handle, mainPtr);
+            MpvErrorCode result;
+            lock (mpvLock)
+            {
+                result = (MpvErrorCode)mpv_command(libmpv_handle, mainPtr);
+            }
             foreach (var ptr in byteArrayPointers)
             {
                 Marshal.FreeHGlobal(ptr);
@@ -95,61 +116,85 @@ namespace Koala
         // Returns a corresponding property tuple from mpv
         public String GetProperty(string property)
         {
-            IntPtr result = mpv_get_property_string(libmpv_handle, GetUtf8Bytes(property));
-            return Marshal.PtrToStringAnsi(result);
+            lock (mpvLock)
+            {
+                IntPtr result = mpv_get_property_string(libmpv_handle, GetUtf8Bytes(property));
+                return Marshal.PtrToStringAnsi(result);
+            }
         }
 
         // Sets a mpv property with the specified value
         public MpvErrorCode SetProperty(string property, MpvFormat format, string value)
         {
             var data = GetUtf8Bytes(value);
-            return (MpvErrorCode)mpv_set_property(libmpv_handle, GetUtf8Bytes(property), (int)format, ref data);
+            lock (mpvLock)
+            {
+                return (MpvErrorCode)mpv_set_property(libmpv_handle, GetUtf8Bytes(property), (int)format, ref data);
+            }
         }
 
         // Initalizes the OpenGL Callbacks
         public MpvErrorCode OpenGLCallbackInitialize(byte[] exts, MyGetProcAddress callback, IntPtr fn_context)
         {
-            return (MpvErrorCode)mpv_opengl_cb_init_gl(libmpv_gl_context, exts, callback, fn_context);
+            lock (mpvLock)
+            {
+                return (MpvErrorCode)mpv_opengl_cb_init_gl(libmpv_gl_context, exts, callback, fn_context);
+            }
         }
 
         // Sets OpenGL Update Callback for mpv
         public MpvErrorCode OpenGLCallbackSetUpdate(MyOpenGLCallbackUpdate callback, IntPtr callback_context)
         {
-            // Set class members
-            callback_method = callback;
-            callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback);
+            lock (mpvLock)
+            {
+                // Set class members
+                callback_method = callback;
+                callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback);
 
-            // Allocate the pointer so it doesn't get garbage collected
-            callback_gc = GCHandle.Alloc(callback_ptr, GCHandleType.Pinned);
+                // Allocate the pointer so it doesn't get garbage collected
+                callback_gc = GCHandle.Alloc(callback_ptr, GCHandleType.Pinned);
 
-            return (MpvErrorCode)mpv_opengl_cb_set_update_callback(libmpv_gl_context, callback_ptr, callback_context);
+                return (MpvErrorCode)mpv_opengl_cb_set_update_callback(libmpv_gl_context, callback_ptr, callback_context);
+            }
         }
 
         // Executed when the OpenGL Update Callback is requested
         public MpvErrorCode OpenGLCallbackDraw(int framebuffer_object, int width, int height)
         {
-            // callback_ptr might get garbage collected if it isn't used too much, so we have to keep it alive this way
-            callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback_method);
+            lock (mpvLock)
+            {
+                // callback_ptr might get garbage collected if it isn't used too much, so we have to keep it alive this way
+                callback_ptr = Marshal.GetFunctionPointerForDelegate<MyOpenGLCallbackUpdate>(callback_method);
 
-            return (MpvErrorCode)mpv_opengl_cb_draw(libmpv_gl_context, framebuffer_object, width, height);
+                return (MpvErrorCode)mpv_opengl_cb_draw(libmpv_gl_context, framebuffer_object, width, height);
+            }
 
         }
 
         // Reports to mpv that the frame has been rendered, entirely optional
         public MpvErrorCode OpenGLCallbackReportFlip()
         {
-            return (MpvErrorCode)mpv_opengl_cb_report_flip(libmpv_gl_context);
+            lock (mpvLock)
+            {
+                return (MpvErrorCode)mpv_opengl_cb_report_flip(libmpv_gl_context);
+            }
         }
 
         // Renders the OpenGL Callback frame that was returned
         public MpvErrorCode OpenGLCallbackRender()
         {
-            return (MpvErrorCode)mpv_opengl_cb_render(libmpv_gl_context);
+            lock (mpvLock)
+            {
+                return (MpvErrorCode)mpv_opengl_cb_render(libmpv_gl_context);
+            }
         }
 
         public MpvErrorCode StreamCbAddReadOnly(String proto, String userdata, MyStreamCbOpenFn open_fn)
         {
-            return (MpvErrorCode)mpv_stream_cb_add_ro(libmpv_handle, proto, userdata, open_fn);
+            lock (mpvLock)
+            {
+                return (MpvErrorCode)mpv_stream_cb_add_ro(libmpv_handle, proto, userdata, open_fn);
+            }
         }
 
         #endregion Methods
